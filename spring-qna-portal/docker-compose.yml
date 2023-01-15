@@ -1,0 +1,111 @@
+version: '3.7'
+
+
+
+
+services:
+
+
+  naming-server:
+    image: roshan66/qna-naming-server:0.0.1-SNAPSHOT
+    mem_reservation: 700m
+    ports:
+      - "8761:8761"
+    networks:
+      - qna-network
+
+
+
+  zipkin-server:
+    image: openzipkin/zipkin:2.23
+    mem_reservation: 300m
+    ports:
+      - "9411:9411"
+    depends_on:
+      - rabbitmq
+    environment:
+      RABBIT_URI: amqp://guest:guest@rabbitmq:5672
+    restart: always
+
+
+
+
+
+  rabbitmq:
+    image: rabbitmq:3.11.6-management-alpine
+    mem_reservation: 300m
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    networks:
+      - qna-network
+
+
+
+
+
+  api-gateway:
+         image: roshan66/qna-api-gateway:0.0.1-SNAPSHOT
+         mem_reservation: 700m
+         ports:
+           - "8765:8765"
+         networks:
+           - qna-network
+         depends_on:
+           - naming-server
+           - rabbitmq
+         environment:
+           EUREKA.CLIENT.SERVICEURL.DEFAULTZONE: http://naming-server:8761/eureka
+           SPRING.ZIPKIN.BASEURL: http://zipkin-server:9411/
+           RABBIT_URI: amqp://guest:guest@rabbitmq:5672
+           SPRING_RABBITMQ_HOST: rabbitmq
+           SPRING_ZIPKIN_SENDER_TYPE: rabbit
+
+
+
+  user-service:
+    image: roshan66/qna-user-service:0.0.1-SNAPSHOT
+    mem_reservation: 700m
+    ports:
+      - "8001:8001"
+    networks:
+      - qna-network
+    depends_on:
+      - naming-server
+      - rabbitmq
+    environment:
+     EUREKA.CLIENT.SERVICEURL.DEFAULTZONE: http://naming-server:8761/eureka
+     SPRING.ZIPKIN.BASEURL: http://zipkin-server:9411/
+     RABBIT_URI: amqp://guest:guest@rabbitmq:5672
+     SPRING_RABBITMQ_HOST: rabbitmq
+     SPRING_ZIPKIN_SENDER_TYPE: rabbit
+
+
+
+  qna-service:
+       image: roshan66/qna-qna-service:0.0.1-SNAPSHOT
+       mem_reservation: 700m
+       ports:
+         - "8101:8101"
+       networks:
+         - qna-network
+       depends_on:
+         - naming-server
+         - rabbitmq
+       environment:
+         EUREKA.CLIENT.SERVICEURL.DEFAULTZONE: http://naming-server:8761/eureka
+         SPRING.ZIPKIN.BASEURL: http://zipkin-server:9411/
+         RABBIT_URI: amqp://guest:guest@rabbitmq:5672
+         SPRING_RABBITMQ_HOST: rabbitmq
+         SPRING_ZIPKIN_SENDER_TYPE: rabbit
+
+
+  
+
+networks:
+  qna-network:
+
+
+
+
+
